@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "rag-chat-app"
+version = "0.1.0"
+description = ""
+authors = ["Kenfj <44661517+kenfj@users.noreply.github.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = {extras = ["standard"], version = "^0.115.0"}
+litellm = "^1.48.0"
+azure-search-documents = "^11.5.1"
+python-dotenv = "^1.0.1"
+
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+# https://stackoverflow.com/questions/67905546
+[tool.mypy]
+exclude = ['venv', '.venv']
+
+# https://mypy.readthedocs.io/en/stable/config_file.html#using-a-pyproject-toml-file
+[[tool.mypy.overrides]]
+module = [
+]
+ignore_missing_imports = true
