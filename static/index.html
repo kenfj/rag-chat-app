@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Chat with RAG App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 20px;
+    }
+    #chat-box {
+      height: 350px;
+      overflow-y: scroll;
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+    .user { color: blue; }
+    .ai { color: green; }
+  </style>
+</head>
+
+<body>
+  <h1>Chat with RAG App</h1>
+
+  <div id="chat-box"></div>
+  <input type="text" id="user-input" size="80" placeholder="Type your question here...">
+  <button id="send-button">Send</button>
+
+  <script type="text/javascript" src="drawdown.js"></script>
+  <script>
+    let history = []
+
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+    const sendButton = document.getElementById('send-button');
+
+    function addMessage(message, sender) {
+      const msgElement = document.createElement('div');
+      msgElement.innerHTML = markdown(message);
+      msgElement.className = sender;
+
+      chatBox.appendChild(msgElement)
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    sendButton.addEventListener('click', async function() {
+      const input = userInput.value;
+      if (!input) return;
+
+      addMessage(`User: ${input}`, 'user');
+      history.push(`User: ${input}`)
+
+      const response = await fetch('http://127.0.0.1:8000/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({input: input, history: history})
+      })
+
+      if (response.ok) {
+        const data = await response.json();
+
+        addMessage(`AI: ${data.response}`, 'ai');
+        history = data.history;
+      } else {
+        const error = await response.json();
+
+        addMessage(`Error: ${error.detail}`, 'ai')
+        console.error(error)
+      }
+
+      userInput.value = '';
+    });
+  </script>
+</body>
+</html>
