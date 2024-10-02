@@ -23,10 +23,10 @@
 </head>
 
 <body>
-  <h1>Chat with RAG App</h1>
+  <h1>Chat with RAG App using Stream</h1>
 
   <p>
-    <a href="chat-stream.html">Chat with Stream</a>
+    <a href="index.html">Chat without Stream</a>
   </p>
 
   <div id="chat-box"></div>
@@ -52,24 +52,22 @@
       chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    let history = []
+    let session_id = "";
 
     async function callBackend() {
       const input = userInput.value;
       if (!input) return;
 
       const userElement = createDivElement();
-      addMessage(userElement, markdown(`User: ${input}`), 'user');
+      addMessage(userElement, `User: ${input}`, 'user');
       userInput.value = '';
 
-      history.push(`User: ${input}`)
-
-      const response = await fetch('http://127.0.0.1:8000/chat', {
+      const response = await fetch('http://127.0.0.1:8000/chat-stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({input: input, history: history})
+        body: JSON.stringify({ input: input, session_id: session_id })
       })
 
       const aiElement = createDivElement();
@@ -83,14 +81,36 @@
           addMessage(aiElement, errorMsg, 'ai')
         });
 
-        userInput.value = '';
         return;
       }
 
-      const data = await response.json();
+      let content = '';
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
 
-      addMessage(aiElement, markdown(`AI: ${data.response}`), 'ai');
-      history = data.history;
+      let isFirstElement = true;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+
+        if (isFirstElement) {
+          isFirstElement = false;
+
+          if (chunk.includes('session_id')) {
+            const data = JSON.parse(chunk);
+            session_id = data.session_id;
+            continue;
+          }
+        }
+
+        content += chunk;
+        const html = markdown(`AI: ${content}`);
+
+        addMessage(aiElement, html, 'ai');
+      }
     }
 
     sendButton.addEventListener('click', callBackend);
@@ -103,4 +123,5 @@
     });
   </script>
 </body>
+
 </html>

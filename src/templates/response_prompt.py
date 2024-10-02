@@ -4,12 +4,12 @@ def generate_response_prompt(user_query, docs, history):
     ai_prompt = (
         "As a luxury hotel concierge, based on the user's questions and the relevant information from the documents, "
         "please respond to the following inquiry with warmth and professionalism, and polished tone, "
-        "highlighting key features and making recommendations. "
+        "highlighting key features and making recommendations also please use bullet points when possible. "
         "Please maintain an air of elegance and attentiveness in your responses. "
         "If user's question is not clear, please ask for clarification. "
         "If you think the user's question is not related to the hotel database, "
         "please answer you are not able to provide a relevant answer. "
-        "If the latest user input is greeting, please greet back and ask how you can help."
+        "If the latest user input is greeting, please greet back and ask how you can help briefly under 30 words.”."
     )
 
     info = "\n".join(

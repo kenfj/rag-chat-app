@@ -7,10 +7,12 @@ Basic RAG chat sample app with ChatGPT style.
 * All works locally
   - Ollama llama3.1 for local LLM
   - Azure AI Search Emulator for local search
-* LiteLLM as a adaptor for various LLM
+* LiteLLM
+  - as a adaptor for various LLM
 * minimal sample code
   - backend is Python FastAPI
   - frontend is plain html (instead of React stuff)
+  - two types: simple response and stream response like ChatGPT
 
 ## Quick Start
 
@@ -31,12 +33,12 @@ poetry install
 ./start_devserver.sh
 ```
 
-* http://127.0.0.1:8000/static/index.html
-* http://127.0.0.1:8000/docs
-
-* open with VSCode
+* Simple Chat: http://127.0.0.1:8000/static/index.html
+* Stream Chat: http://127.0.0.1:8000/static/chat-stream.html
+* FastAPI Doc: http://127.0.0.1:8000/docs
 
 ```bash
+# open with VSCode
 poetry shell
 export REQUESTS_CA_BUNDLE=~/.aspnet/https/certificate.pem
 code .
@@ -141,9 +143,9 @@ export REQUESTS_CA_BUNDLE=~/.aspnet/https/certificate.pem
 * make sure to install Jupyter extension in your VSCode
 * open and run with VSCode [src/notes/azure-ai-search-notes.py](src/notes/azure-ai-search-notes.py)
 
-## UI libs
+## UI libs Note
 
-(Optional) popular Python GUI
+popular Python UI libraries
 
 * https://streamlit.io/
 * https://www.gradio.app/

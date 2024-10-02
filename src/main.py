@@ -1,9 +1,14 @@
+import uuid
+from typing import Dict, List
+
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from litellm import completion
+from litellm import acompletion, completion
 
+from models.ChatRequest import ChatRequest
 from models.Request import Request
 from templates.keywords_prompt import generate_keywords_prompt
 from templates.response_prompt import generate_response_prompt
@@ -33,11 +38,39 @@ def generate_response(prompt):
     return response
 
 
+# https://docs.litellm.ai/docs/completion/stream#async-streaming
+async def stream_response(prompt: str, session_id: str):
+    response = await acompletion(
+        model=settings.LLM_MODEL_NAME,
+        messages=[{"content": prompt, "role": "user"}],
+        api_base=settings.LLM_API_BASE,
+        stream=True,
+    )
+
+    ai_response = "Ai: "
+
+    yield f"{{\"session_id\": \"{session_id}\"}}\n"
+
+    async for chunk in response:
+        content = chunk.choices[0].delta.content
+
+        # the last element of chunk content is always None
+        if content is not None:
+            ai_response += content
+            yield content
+        else:
+            # Save to conversation history
+            conversations[session_id].append(ai_response)
+
+
 # ----- Web API -----
 
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# In-memory storage for conversations
+conversations: Dict[str, List[str]] = {}
 
 
 @app.post("/chat")
@@ -59,3 +92,37 @@ def chat_response(req: Request):
 
     req.history.append(f"AI: {ai_message}")
     return {"response": ai_message, "history": req.history}
+
+
+@app.post("/chat-stream")
+async def chat_stream(req: ChatRequest):
+    if not req.session_id:
+        session_id = str(uuid.uuid4())
+        req.session_id = session_id
+        conversations[session_id] = []
+
+    logger.info(f"Session ID: {req.session_id}")
+    history = conversations.get(req.session_id, [])
+
+    keywords_prompt = generate_keywords_prompt(req.input, history)
+
+    keywords_response = generate_response(keywords_prompt)
+    keywords = keywords_response.choices[0].message.content
+
+    docs = search_documents(keywords)
+    docs_list = [doc for doc in docs]
+
+    logger.info(f"Documents:\n{"\n".join([str(doc) for doc in docs_list])}")
+
+    response_prompt = generate_response_prompt(req.input, docs_list, history)
+
+    # Save to conversation history
+    conversations[req.session_id].append(f"User: {req.input}")
+
+    content = stream_response(response_prompt, req.session_id)
+    return StreamingResponse(content, media_type='text/plain')
+
+
+@app.get("/history/{session_id}")
+async def get_history(session_id: str):
+    return {"history": conversations.get(session_id, [])}
