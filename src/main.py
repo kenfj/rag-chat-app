@@ -23,8 +23,6 @@ search_client = SearchClient(settings.SEARCH_ENDPOINT, index_name, credential)
 
 
 def search_documents(query: str):
-    logger.info(f"Searching documents query: {query}")
-
     docs = search_client.search(search_text=query)
     return docs
 
@@ -96,7 +94,7 @@ def chat_response(req: Request):
 
 @app.post("/chat-stream")
 async def chat_stream(req: ChatRequest):
-    if not req.session_id:
+    if not req.session_id or req.session_id not in conversations:
         session_id = str(uuid.uuid4())
         req.session_id = session_id
         conversations[session_id] = []
@@ -109,8 +107,13 @@ async def chat_stream(req: ChatRequest):
     keywords_response = generate_response(keywords_prompt)
     keywords = keywords_response.choices[0].message.content
 
-    docs = search_documents(keywords)
-    docs_list = [doc for doc in docs]
+    logger.info(f"Search keywords: {keywords}")
+
+    if "NONE" in keywords:
+        docs_list = []
+    else:
+        docs = search_documents(keywords)
+        docs_list = [doc for doc in docs]
 
     logger.info(f"Documents:\n{"\n".join([str(doc) for doc in docs_list])}")
 
