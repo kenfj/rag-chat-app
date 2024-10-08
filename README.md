@@ -13,6 +13,7 @@ Basic RAG chat sample app with ChatGPT style.
   - backend is Python FastAPI
   - frontend is plain html (instead of React stuff)
   - two types: simple response and stream response like ChatGPT
+* Chainlit python UI
 
 ## Quick Start
 
@@ -35,6 +36,7 @@ poetry install
 
 * Simple Chat: http://127.0.0.1:8000/static/index.html
 * Stream Chat: http://127.0.0.1:8000/static/chat-stream.html
+* Chainlit UI: http://127.0.0.1:8000/chainlit/
 * FastAPI Doc: http://127.0.0.1:8000/docs
 
 ```bash
@@ -150,3 +152,21 @@ popular Python UI libraries
 * https://streamlit.io/
 * https://www.gradio.app/
 * https://docs.chainlit.io/get-started/overview
+
+### setup Chainlit
+
+```bash
+# need to remove the current fastapi
+# because chainlit (1.2.0) depends on fastapi (>=0.110.1,<0.113)
+poetry remove fastapi
+poetry add "fastapi[standard]"@^0.112.0 chainlit
+
+# this ensures all dependencies are resolved properly
+poetry update
+
+# verify the versions of fastapi and its dependencies
+poetry show fastapi
+
+# verify the versions of installed packages
+poetry show
+```

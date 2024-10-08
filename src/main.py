@@ -3,6 +3,7 @@ from typing import Dict, List
 
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
+from chainlit.utils import mount_chainlit
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -66,6 +67,8 @@ async def stream_response(prompt: str, session_id: str):
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+mount_chainlit(app=app, target="src/my_cl_app.py", path="/chainlit")
 
 # In-memory storage for conversations
 conversations: Dict[str, List[str]] = {}

@@ -6,12 +6,15 @@ from uvicorn.logging import DefaultFormatter
 # uvicorn DefaultFormatter for consistent log format
 # https://stackoverflow.com/questions/62955750/what-does-do-in-python-log-config
 
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("LiteLLM").setLevel(logging.WARNING)
+
 
 def setup_logger(name, level=logging.INFO):
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    if not logger.handlers:
+    if not logger.hasHandlers():
         handler = logging.StreamHandler()
 
         formatter = DefaultFormatter(
