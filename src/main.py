@@ -9,18 +9,19 @@ from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from litellm import acompletion, completion
 
+from config.env_config import (LLM_API_BASE, LLM_MODEL_NAME, SEARCH_API_KEY,
+                               SEARCH_ENDPOINT)
+from config.logging_config import get_logger
 from models.ChatRequest import ChatRequest
 from models.Request import Request
 from templates.keywords_prompt import generate_keywords_prompt
 from templates.response_prompt import generate_response_prompt
-from utils import settings
-from utils.logger_setup import setup_logger
 
-logger = setup_logger(__name__)
+logger = get_logger(__name__)
 
 index_name = "hotels-quickstart"
-credential = AzureKeyCredential(settings.SEARCH_API_KEY)
-search_client = SearchClient(settings.SEARCH_ENDPOINT, index_name, credential)
+credential = AzureKeyCredential(SEARCH_API_KEY)
+search_client = SearchClient(SEARCH_ENDPOINT, index_name, credential)
 
 
 def search_documents(query: str):
@@ -30,9 +31,9 @@ def search_documents(query: str):
 
 def generate_response(prompt):
     response = completion(
-        model=settings.LLM_MODEL_NAME,
+        model=LLM_MODEL_NAME,
         messages=[{"content": prompt, "role": "user"}],
-        api_base=settings.LLM_API_BASE,
+        api_base=LLM_API_BASE,
     )
     return response
 
@@ -40,9 +41,9 @@ def generate_response(prompt):
 # https://docs.litellm.ai/docs/completion/stream#async-streaming
 async def stream_response(prompt: str, session_id: str):
     response = await acompletion(
-        model=settings.LLM_MODEL_NAME,
+        model=LLM_MODEL_NAME,
         messages=[{"content": prompt, "role": "user"}],
-        api_base=settings.LLM_API_BASE,
+        api_base=LLM_API_BASE,
         stream=True,
     )
 

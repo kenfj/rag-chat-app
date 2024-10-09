@@ -3,9 +3,9 @@ import json
 import chainlit as cl
 import httpx
 
-from utils.logger_setup import setup_logger
+from config.logging_config import get_logger
 
-logger = setup_logger(__name__)
+logger = get_logger(__name__)
 
 
 @cl.on_chat_start

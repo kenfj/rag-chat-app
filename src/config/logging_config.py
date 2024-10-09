@@ -2,7 +2,7 @@ import logging
 
 from uvicorn.logging import DefaultFormatter
 
-from utils import settings
+from config.env_config import LOG_LEVEL
 
 # https://zenn.dev/techflagcorp/articles/8d6327311e1e9f
 
@@ -22,25 +22,24 @@ logging.getLogger("azure.core").setLevel(logging.WARNING)
 loggers = {}
 
 
-def setup_logger(name):
+def get_logger(name):
     if name in loggers:
         return loggers[name]
 
     logger = logging.getLogger(name)
-    logger.setLevel(settings.LOG_LEVEL)
+    logger.setLevel(LOG_LEVEL)
 
     # Note: logger.hasHandlers() will not work as expected
 
     handler = logging.StreamHandler()
-    handler.setLevel(settings.LOG_LEVEL)
+    handler.setLevel(LOG_LEVEL)
 
-    formatter = DefaultFormatter(
-        fmt="%(levelprefix)s %(asctime)s %(name)s %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        use_colors=True,
-    )
+    fmt = "%(levelprefix)s %(asctime)s %(name)s %(message)s"
+    datefmt = "%Y-%m-%d %H:%M:%S"
 
+    formatter = DefaultFormatter(fmt, datefmt, use_colors=True)
     handler.setFormatter(formatter)
+
     logger.addHandler(handler)
     logger.propagate = False
 
