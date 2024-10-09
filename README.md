@@ -170,3 +170,11 @@ poetry show fastapi
 # verify the versions of installed packages
 poetry show
 ```
+
+## Upgrade Packages
+
+```bash
+poetry show --outdated
+
+poetry update
+```
