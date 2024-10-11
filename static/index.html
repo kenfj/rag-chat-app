@@ -52,7 +52,7 @@
       chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    let history = []
+    let messages = [];
 
     async function callBackend() {
       const input = userInput.value;
@@ -62,14 +62,14 @@
       addMessage(userElement, markdown(`User: ${input}`), 'user');
       userInput.value = '';
 
-      history.push(`User: ${input}`)
+      messages.push({"role": "user", "content": input})
 
       const response = await fetch('http://127.0.0.1:8000/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({input: input, history: history})
+        body: JSON.stringify({input: input, messages: messages})
       })
 
       const aiElement = createDivElement();
@@ -90,7 +90,7 @@
       const data = await response.json();
 
       addMessage(aiElement, markdown(`AI: ${data.response}`), 'ai');
-      history = data.history;
+      messages = data.messages;
     }
 
     sendButton.addEventListener('click', callBackend);
