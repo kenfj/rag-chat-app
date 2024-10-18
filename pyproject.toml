@@ -14,6 +14,7 @@ python-dotenv = "^1.0.1"
 fastapi = {version = "^0.112.0", extras = ["standard"]}
 chainlit = "^1.2.0"
 httpx = "^0.27.2"
+itsdangerous = "^2.2.0"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -1,6 +1,8 @@
+from models import Message
+
 # System Role Message: Setting Context and Guiding the Model
 
-system_keyword_prompt = (
+_system_keyword_prompt = (
     "Based on the user's question, "
     "please provide only the relevant keywords "
     "for a database search without additional explanations. "
@@ -12,9 +14,12 @@ system_keyword_prompt = (
     "If database query is not necessary, please answer just one word 'NONE'."
 )
 
-system_keyword_message = {"role": "system", "content": system_keyword_prompt}
+system_keyword_message = Message(
+    role="system",
+    content=_system_keyword_prompt,
+)
 
-system_chat_prompt = (
+_system_chat_prompt = (
     "As a luxury hotel concierge, based on the user's questions and the relevant information from the documents, "
     "please respond to the following inquiry with warmth and professionalism, and polished tone, "
     "highlighting key features and making recommendations also please use bullet points when possible. "
@@ -27,4 +32,7 @@ system_chat_prompt = (
 
 
 def system_chat_message(docs_text: str):
-    return {"role": "system", "content": system_chat_prompt + "\n" + docs_text}
+    return Message(
+        role="system",
+        content=_system_chat_prompt + "\n" + docs_text,
+    )

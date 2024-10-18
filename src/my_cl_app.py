@@ -1,5 +1,3 @@
-import json
-
 import chainlit as cl
 import httpx
 
@@ -18,39 +16,36 @@ async def main():
 @cl.on_message
 async def chainlit_chat(message: cl.Message):
     session_id = cl.user_session.get("session_id", "")
+    logger.info(f"session_id: {session_id}")
 
     stream_url = "http://127.0.0.1:8000/chat-stream"
     headers = {"Content-Type": "application/json"}
-    payload = {"input": message.content, "session_id": session_id}
+    payload = {"input": message.content}
 
     logger.info(f"Sending message to {stream_url}: {payload}")
 
     async with httpx.AsyncClient() as client:
+        cookies = httpx.Cookies()
+        cookies.set("session_id", session_id)
+
         async with client.stream(
-            "POST", stream_url, headers=headers, json=payload
+            "POST", stream_url, headers=headers, cookies=cookies, json=payload
         ) as response:
             msg = cl.Message(content="")
             await msg.send()
 
+            session_id = response.cookies.get("session_id")
+            cl.user_session.set("session_id", session_id)
+
             buffer = ""
-            is_first_element = True
 
             async for chunk in response.aiter_bytes():
-                if is_first_element:
-                    is_first_element = False
-
-                    session_id = find_session_id(chunk)
-                    cl.user_session.set("session_id", session_id)
-                    continue
-
                 buffer += chunk.decode("utf-8")
                 msg.content = buffer
                 await msg.update()
 
 
-def find_session_id(chunk):
-    first_element = chunk.decode("utf-8").strip()
-    data = json.loads(first_element)
-    session_id = data.get("session_id", "")
-
-    return session_id
+@cl.on_chat_end
+def on_chat_end():
+    logger.info("The user disconnected!")
+    cl.user_session.set("session_id", None)

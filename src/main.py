@@ -1,10 +1,7 @@
-import uuid
-from typing import Dict, List
-
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 from chainlit.utils import mount_chainlit
-from fastapi import FastAPI
+from fastapi import FastAPI, Query, Request
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from litellm import acompletion, completion
@@ -12,9 +9,8 @@ from litellm import acompletion, completion
 from config.env_config import (LLM_API_BASE, LLM_MODEL_NAME, SEARCH_API_KEY,
                                SEARCH_ENDPOINT)
 from config.logging_config import get_logger
-from models.ChatRequest import ChatRequest
-from models.ChatResponse import ChatResponse
-from models.StreamChatRequest import StreamChatRequest
+from middleware import StateSessionMiddleware
+from models import ChatRequest, ChatResponse, Message, StreamChatRequest
 from templates.system_prompt import system_chat_message, system_keyword_message
 
 logger = get_logger(__name__)
@@ -29,7 +25,7 @@ def search_documents(query: str):
     return docs
 
 
-def generate_response(messages: List[dict]):
+def generate_response(messages: list[Message]):
     response = completion(
         model=LLM_MODEL_NAME,
         messages=messages,
@@ -39,89 +35,56 @@ def generate_response(messages: List[dict]):
 
 
 # https://docs.litellm.ai/docs/completion/stream#async-streaming
-async def stream_response(messages: List[dict], session_id: str):
+async def async_stream_response(messages: list[Message]):
     response = await acompletion(
         model=LLM_MODEL_NAME,
         messages=messages,
         api_base=LLM_API_BASE,
         stream=True,
     )
+    return response
 
+
+async def stream_response(request: Request, messages: list[Message]):
     buffer = ""
+    response = await async_stream_response(messages)
 
-    yield f'{{"session_id": "{session_id}"}}\n'
+    if "history" not in request.state.session:
+        request.state.session["history"] = []
 
+    # the last element of chunk content is always None
     async for chunk in response:
         content = chunk.choices[0].delta.content
 
-        # the last element of chunk content is always None
         if content is not None:
             buffer += content
             yield content
         else:
-            # Save to conversation history
-            conversations[session_id].append({"role": "assistant", "content": buffer})
+            # Save LLM message to chat history
+            assistant_message = Message(role="assistant", content=buffer)
+            request.state.session["history"].append(assistant_message)
 
 
 # ----- Web API -----
 
 app = FastAPI()
 
+app.add_middleware(StateSessionMiddleware)
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 mount_chainlit(app=app, target="src/my_cl_app.py", path="/chainlit")
 
-# In-memory storage for conversations
-conversations: Dict[str, List[str]] = {}
 
+@app.post("/chat", response_model=ChatResponse)
+def chat_response(req: ChatRequest):
+    history = req.history.copy()
 
-@app.post("/chat")
-def chat_response(req: ChatRequest) -> ChatResponse:
-    messages = req.messages.copy()
+    # Save user input to chat history
+    user_message = Message(role="user", content=req.input)
+    history.append(user_message)
 
-    messages.insert(0, system_keyword_message)
-    messages.append({"role": "user", "content": req.input})
-    messages.append({"role": "assistant", "content": ""})
-
-    keywords_response = generate_response(messages)
-    keywords = keywords_response.choices[0].message.content
-
-    logger.info(f"Search keywords: {keywords}")
-
-    docs = search_documents(keywords)
-
-    docs_text = "Documents:\n" + "\n".join([str(doc) for doc in docs])
-    logger.info(docs_text)
-
-    messages = req.messages.copy()
-
-    messages.insert(0, system_chat_message(docs_text))
-    messages.append({"role": "user", "content": req.input})
-    messages.append({"role": "assistant", "content": ""})
-
-    response = generate_response(messages)
-    content = response.choices[0].message.content
-
-    req.messages.append({"role": "assistant", "content": content})
-    return {"response": content, "messages": req.messages}
-
-
-@app.post("/chat-stream")
-async def chat_stream(req: StreamChatRequest):
-    if not req.session_id or req.session_id not in conversations:
-        session_id = str(uuid.uuid4())
-        req.session_id = session_id
-        conversations[session_id] = []
-
-    logger.info(f"Session ID: {req.session_id}")
-
-    messages = conversations.get(req.session_id, []).copy()
-
-    messages.insert(0, system_keyword_message)
-    messages.append({"role": "user", "content": req.input})
-    messages.append({"role": "assistant", "content": ""})
-
-    logger.info(f"Messages: {messages}")
+    messages = create_keyword_messages(history)
 
     keywords_response = generate_response(messages)
     keywords = keywords_response.choices[0].message.content
@@ -133,19 +96,62 @@ async def chat_stream(req: StreamChatRequest):
     docs_text = "Documents:\n" + "\n".join([str(doc) for doc in docs])
     logger.info(docs_text)
 
-    messages = conversations.get(req.session_id, []).copy()
+    messages = create_chat_messages(history, docs_text)
 
-    messages.insert(0, system_chat_message(docs_text))
-    messages.append({"role": "user", "content": req.input})
-    messages.append({"role": "assistant", "content": ""})
+    response = generate_response(messages)
+    content = response.choices[0].message.content
 
-    # Save to conversation history
-    conversations[req.session_id].append({"role": "user", "content": req.input})
+    # Save LLM output to chat history
+    assistant_message = Message(role="assistant", content=content)
+    history.append(assistant_message)
 
-    content = stream_response(messages, req.session_id)
+    return ChatResponse(response=content, history=history)
+
+
+@app.post("/chat-stream")
+async def chat_stream(request: Request, req: StreamChatRequest):
+    if "history" not in request.state.session:
+        request.state.session["history"] = []
+
+    # Save user input to chat history
+    request_message = Message(role="user", content=req.input)
+    request.state.session["history"].append(request_message)
+
+    messages = create_keyword_messages(request.state.session["history"])
+
+    keywords_response = generate_response(messages)
+    keywords = keywords_response.choices[0].message.content
+
+    logger.info(f"Search keywords: {keywords}")
+
+    docs = search_documents(keywords) if "NONE" not in keywords else []
+
+    docs_text = "Documents:\n" + "\n".join([str(doc) for doc in docs])
+    logger.info(docs_text)
+
+    messages = create_chat_messages(request.state.session["history"], docs_text)
+
+    content = stream_response(request, messages)
+
     return StreamingResponse(content, media_type="text/plain")
 
 
-@app.get("/history/{session_id}")
-async def get_history(session_id: str):
-    return {"history": conversations.get(session_id, [])}
+@app.get("/chat-history", response_model=list[Message])
+async def chat_history(request: Request, session_id: str = Query(None)):
+    """optionally pass session_id to get chat history for debugging"""
+    if session_id is not None:
+        middleware = StateSessionMiddleware(app)
+        request.state.session = middleware.load_session(session_id)
+
+    return request.state.session.get("history", [])
+
+
+place_holder_message = Message(role="assistant", content="")
+
+
+def create_keyword_messages(history: list[Message]):
+    return [system_keyword_message] + history + [place_holder_message]
+
+
+def create_chat_messages(history: list[Message], docs_text: str):
+    return [system_chat_message(docs_text)] + history + [place_holder_message]

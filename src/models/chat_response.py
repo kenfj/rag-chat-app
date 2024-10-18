@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 
+from models import Message
+
 
 class ChatResponse(BaseModel):
     response: str
-    messages: list[dict[str, str]]
+    history: list[Message]

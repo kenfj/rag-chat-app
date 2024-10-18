@@ -13,7 +13,7 @@ Basic RAG chat sample app with ChatGPT style.
   - backend is Python FastAPI
   - frontend is plain html (instead of React stuff)
   - two types: simple response and stream response like ChatGPT
-* Chainlit python UI
+* Chainlit python low-code UI
 
 ## Quick Start
 
@@ -46,6 +46,33 @@ export REQUESTS_CA_BUNDLE=~/.aspnet/https/certificate.pem
 code .
 ```
 
+## Curl Test
+
+```bash
+curl -v -c cookies.txt -X POST "http://127.0.0.1:8000/chat-stream" \
+  -H "Content-Type: application/json" -d '{"input":"hello"}'
+
+curl -v -b cookies.txt -X GET \
+  "http://127.0.0.1:8000/chat-history?session_id=521b158d-9daa-4a70-b419-1074cef0c768"
+```
+
+## Example Messages Structure with Placeholder
+
+* system role message: setting context and guiding the model
+* adding a placeholder for the assistant can be a good practice
+  - it’s common practice to include a placeholder message with an empty content string.
+  - especially if you want to clearly indicate that the assistant's response is expected next.
+
+```python
+messages = [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "What is the weather today?"},
+    {"role": "assistant", "content": "It's sunny and warm."},
+    {"role": "user", "content": "What about tomorrow?"},  # User's last input
+    {"role": "assistant", "content": ""}  # Placeholder for the next assistant response
+]
+```
+
 ## Setup Notes
 
 * FastAPI: https://github.com/fastapi/fastapi
@@ -57,6 +84,9 @@ poetry init -n
 
 poetry add -G dev ipykernel
 poetry add fastapi[standard] litellm azure-search-documents python-dotenv
+
+# it's safe to install in case error: No module named 'itsdangerous'
+poetry add itsdangerous
 ```
 
 * Ollama: https://github.com/ollama/ollama

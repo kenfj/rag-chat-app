@@ -52,8 +52,6 @@
       chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    let session_id = "";
-
     async function callBackend() {
       const input = userInput.value;
       if (!input) return;
@@ -67,7 +65,7 @@
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ input: input, session_id: session_id })
+        body: JSON.stringify({ input: input })
       })
 
       const aiElement = createDivElement();
@@ -88,23 +86,11 @@
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
 
-      let isFirstElement = true;
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-
-        if (isFirstElement) {
-          isFirstElement = false;
-
-          if (chunk.includes('session_id')) {
-            const data = JSON.parse(chunk);
-            session_id = data.session_id;
-            continue;
-          }
-        }
 
         content += chunk;
         const html = markdown(`AI: ${content}`);
