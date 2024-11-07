@@ -2,7 +2,7 @@ import logging
 
 from uvicorn.logging import DefaultFormatter
 
-from config.env_config import LOG_LEVEL
+from config.settings import settings
 
 # https://zenn.dev/techflagcorp/articles/8d6327311e1e9f
 
@@ -27,12 +27,12 @@ def get_logger(name):
         return loggers[name]
 
     logger = logging.getLogger(name)
-    logger.setLevel(LOG_LEVEL)
+    logger.setLevel(settings.LOG_LEVEL)
 
     # Note: logger.hasHandlers() will not work as expected
 
     handler = logging.StreamHandler()
-    handler.setLevel(LOG_LEVEL)
+    handler.setLevel(settings.LOG_LEVEL)
 
     fmt = "%(levelprefix)s %(asctime)s %(name)s %(message)s"
     datefmt = "%Y-%m-%d %H:%M:%S"

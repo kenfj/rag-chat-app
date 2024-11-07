@@ -6,9 +6,8 @@ from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from litellm import acompletion, completion
 
-from config.env_config import (LLM_API_BASE, LLM_MODEL_NAME, SEARCH_API_KEY,
-                               SEARCH_ENDPOINT)
 from config.logging_config import get_logger
+from config.settings import settings
 from middleware import StateSessionMiddleware
 from models import ChatRequest, ChatResponse, Message, StreamChatRequest
 from templates.system_prompt import system_chat_message, system_keyword_message
@@ -16,8 +15,8 @@ from templates.system_prompt import system_chat_message, system_keyword_message
 logger = get_logger(__name__)
 
 index_name = "hotels-quickstart"
-credential = AzureKeyCredential(SEARCH_API_KEY)
-search_client = SearchClient(SEARCH_ENDPOINT, index_name, credential)
+credential = AzureKeyCredential(settings.SEARCH_API_KEY)
+search_client = SearchClient(settings.SEARCH_ENDPOINT, index_name, credential)
 
 
 def search_documents(query: str):
@@ -27,9 +26,9 @@ def search_documents(query: str):
 
 def generate_response(messages: list[Message]):
     response = completion(
-        model=LLM_MODEL_NAME,
+        model=settings.model,
         messages=messages,
-        api_base=LLM_API_BASE,
+        api_base=settings.api_base,
     )
     return response
 
@@ -37,9 +36,9 @@ def generate_response(messages: list[Message]):
 # https://docs.litellm.ai/docs/completion/stream#async-streaming
 async def async_stream_response(messages: list[Message]):
     response = await acompletion(
-        model=LLM_MODEL_NAME,
+        model=settings.model,
         messages=messages,
-        api_base=LLM_API_BASE,
+        api_base=settings.api_base,
         stream=True,
     )
     return response
