@@ -83,10 +83,15 @@ pyenv local 3.12.5
 poetry init -n
 
 poetry add -G dev ipykernel
-poetry add fastapi[standard] litellm azure-search-documents python-dotenv
 
-# it's safe to install in case error: No module named 'itsdangerous'
-poetry add itsdangerous
+# Notes:
+# fastapi includes httpx (cf. poetry show fastapi)
+# pydantic-settings includes python-dotenv (cf. poetry show pydantic-settings)
+poetry add fastapi[standard] pydantic-settings
+poetry add litellm azure-search-documents
+
+# https://python-poetry.org/docs/cli/#export
+poetry export --without-hashes -f requirements.txt --output requirements.txt
 ```
 
 * Ollama: https://github.com/ollama/ollama
