@@ -23,9 +23,14 @@ class StateSessionMiddleware(BaseHTTPMiddleware):
         session_id = self.find_session_id(request)
         logger.info("session_id: " + session_id)
 
-        request.state.session = self.load_session(session_id)
+        session = self.load_session(session_id)
+        logger.info(f"session data: {session}")
 
-        logger.warning(request.state.session)
+        if "history" not in session:
+            session["history"] = []
+
+        request.state.session = session
+
         response: Response = await call_next(request)
 
         self.save_session(session_id, request.state.session)
@@ -34,6 +39,13 @@ class StateSessionMiddleware(BaseHTTPMiddleware):
         return response
 
     def find_session_id(self, request: Request):
+        # optional GET param to get chat history for debugging
+        session_id = request.query_params.get("session_id")
+
+        if session_id is not None:
+            return session_id
+
+        # find session_id from cookie or create new session_id
         session_id = request.cookies.get("session_id")
 
         if session_id is None or session_id not in session_store:

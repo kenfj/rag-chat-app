@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     api_base: str = Field(alias="LLM_API_BASE", default=None)
     SEARCH_ENDPOINT: str = Field(default=...)
     SEARCH_API_KEY: str = Field(default=...)
+    SEARCH_INDEX_NAME: str = Field(default=...)
 
 
 settings = Settings()
