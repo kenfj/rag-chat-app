@@ -1,7 +1,7 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from config.constants import ENV
+from config.settings import ENV
 from utils.env_utils import find_env_file_full
 
 env_file_full = find_env_file_full(ENV)

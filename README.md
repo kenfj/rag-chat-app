@@ -26,6 +26,7 @@ docker compose up -d
 docker compose logs -f
 ```
 
+* setup ollama local LLM (see setup below)
 * start dev server
 
 ```bash
@@ -44,6 +45,14 @@ poetry install
 poetry shell
 export REQUESTS_CA_BUNDLE=~/.aspnet/https/certificate.pem
 code .
+```
+
+* local docker server
+
+```bash
+docker build -t rag-chat-app .
+
+docker run --rm --env-file=.env.docker -p 8000:8000 rag-chat-app
 ```
 
 ## Curl Test
@@ -78,10 +87,13 @@ messages = [
 * FastAPI: https://github.com/fastapi/fastapi
 
 ```bash
+pyenv install 3.12.5
 pyenv local 3.12.5
 
 poetry init -n
+poetry config virtualenvs.in-project true --local
 
+# notebook cells for dev convenience
 poetry add -G dev ipykernel
 
 # Notes:
@@ -89,10 +101,14 @@ poetry add -G dev ipykernel
 # pydantic-settings includes python-dotenv (cf. poetry show pydantic-settings)
 poetry add fastapi[standard] pydantic-settings
 poetry add litellm azure-search-documents
-
-# https://python-poetry.org/docs/cli/#export
-poetry export --without-hashes -f requirements.txt --output requirements.txt
 ```
+
+* linter, formatter, type checker (using VSCode extension)
+  - linter: flake8
+  - formatter: black, isort
+  - type checker: Pyright (included in Pylance) instead of mypy
+    - `"python.analysis.typeCheckingMode": "basic"` in `.vscode/settings.json`
+    - https://blog.yhiraki.com/nodes/type-checking-with-pyright/
 
 * Ollama: https://github.com/ollama/ollama
   - used with LiteLLM-Ollama: https://docs.litellm.ai/docs/providers/ollama
@@ -155,6 +171,8 @@ volumes:
 
 ```bash
 docker compose up -d
+
+docker compose logs -f
 
 # you should see some json from curl output
 curl https://localhost:5081/

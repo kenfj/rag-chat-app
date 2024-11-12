@@ -5,14 +5,18 @@ from fastapi import FastAPI, Query, Request
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from litellm import acompletion, completion
+from litellm.types.utils import Choices, ModelResponse, StreamingChoices
+from litellm.utils import CustomStreamWrapper
 
 from config.logging_config import get_logger
-from config.settings import settings
+from config.settings import ENV, settings
 from middleware import StateSessionMiddleware
 from models import ChatRequest, ChatResponse, Message, StreamChatRequest
 from templates.system_prompt import system_chat_message, system_keyword_message
 
 logger = get_logger(__name__)
+
+logger.info(f"ENV: {ENV}")
 
 index_name = "hotels-quickstart"
 credential = AzureKeyCredential(settings.SEARCH_API_KEY)
@@ -30,6 +34,10 @@ def generate_response(messages: list[Message]):
         messages=messages,
         api_base=settings.api_base,
     )
+
+    if not isinstance(response, ModelResponse):
+        raise ValueError(f"Unexpected type: {type(response)} for ModelResponse")
+
     return response
 
 
@@ -41,6 +49,10 @@ async def async_stream_response(messages: list[Message]):
         api_base=settings.api_base,
         stream=True,
     )
+
+    if not isinstance(response, CustomStreamWrapper):
+        raise ValueError(f"Unexpected type: {type(response)} for CustomStreamWrapper")
+
     return response
 
 
@@ -53,7 +65,12 @@ async def stream_response(request: Request, messages: list[Message]):
 
     # the last element of chunk content is always None
     async for chunk in response:
-        content = chunk.choices[0].delta.content
+        choice = chunk.choices[0]
+
+        if not isinstance(choice, StreamingChoices):
+            raise ValueError(f"Unexpected type: {type(choice)} for StreamingChoices")
+
+        content = choice.delta.content
 
         if content is not None:
             buffer += content
@@ -86,11 +103,16 @@ def chat_response(req: ChatRequest):
     messages = create_keyword_messages(history)
 
     keywords_response = generate_response(messages)
-    keywords = keywords_response.choices[0].message.content
+    choice = keywords_response.choices[0]
+
+    if not isinstance(choice, Choices):
+        raise ValueError(f"Unexpected type: {type(choice)} for Choices")
+
+    keywords = choice.message.content
 
     logger.info(f"Search keywords: {keywords}")
 
-    docs = search_documents(keywords) if "NONE" not in keywords else []
+    docs = search_documents(keywords) if keywords and "NONE" not in keywords else []
 
     docs_text = "Documents:\n" + "\n".join([str(doc) for doc in docs])
     logger.info(docs_text)
@@ -98,7 +120,12 @@ def chat_response(req: ChatRequest):
     messages = create_chat_messages(history, docs_text)
 
     response = generate_response(messages)
-    content = response.choices[0].message.content
+    choice = response.choices[0]
+
+    if not isinstance(choice, Choices):
+        raise ValueError(f"Unexpected type: {type(choice)} for Choices")
+
+    content = choice.message.content or ""
 
     # Save LLM output to chat history
     assistant_message = Message(role="assistant", content=content)
@@ -119,11 +146,16 @@ async def chat_stream(request: Request, req: StreamChatRequest):
     messages = create_keyword_messages(request.state.session["history"])
 
     keywords_response = generate_response(messages)
-    keywords = keywords_response.choices[0].message.content
+    choice = keywords_response.choices[0]
+
+    if not isinstance(choice, Choices):
+        raise ValueError(f"Unexpected type: {type(choice)} for Choices")
+
+    keywords = choice.message.content
 
     logger.info(f"Search keywords: {keywords}")
 
-    docs = search_documents(keywords) if "NONE" not in keywords else []
+    docs = search_documents(keywords) if keywords and "NONE" not in keywords else []
 
     docs_text = "Documents:\n" + "\n".join([str(doc) for doc in docs])
     logger.info(docs_text)

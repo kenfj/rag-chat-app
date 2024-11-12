@@ -21,12 +21,10 @@ ipykernel = "^6.29.5"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-# https://stackoverflow.com/questions/67905546
-[tool.mypy]
-exclude = ['venv', '.venv']
+[tool.black]
+line-length = 88
 
-# https://mypy.readthedocs.io/en/stable/config_file.html#using-a-pyproject-toml-file
-[[tool.mypy.overrides]]
-module = [
-]
-ignore_missing_imports = true
+[tool.isort]
+profile = "black"
+line_length = 88
+skip = ["__init__.py"]
