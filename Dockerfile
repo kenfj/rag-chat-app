@@ -15,12 +15,14 @@ RUN poetry install --no-interaction --no-root --no-ansi && \
 
 COPY .flake8 ./
 COPY src/ ./src/
+COPY tests/ ./tests/
 COPY static/ ./static/
 COPY [".env.development", ".env.production", "./"]
 
-RUN flake8 src && \
-    black --check --diff src && \
-    isort --check-only --diff src
+RUN flake8 src tests && \
+    black --check --diff src tests && \
+    isort --check-only --diff src tests && \
+    poetry run pytest --cov=src --cov-report=term-missing tests
 
 
 # Stage 2: Final Image

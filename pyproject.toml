@@ -32,3 +32,24 @@ line-length = 88
 profile = "black"
 line_length = 88
 skip = ["__init__.py"]
+
+# https://docs.pytest.org/en/stable/reference/customize.html
+[tool.pytest.ini_options]
+pythonpath = [
+  "./src"
+]
+filterwarnings = [
+  "ignore::DeprecationWarning:litellm.*:",
+  "ignore::DeprecationWarning:pydantic.*:",
+  "ignore::DeprecationWarning:importlib.*:",
+]
+# https://github.com/pytest-dev/pytest-asyncio/issues/924
+asyncio_default_fixture_loop_scope="function"
+
+# https://coverage.readthedocs.io/en/latest/source.html
+[tool.coverage.run]
+omit = [
+    "__init__.py",
+    "src/repositories/*",
+    "src/my_cl_app.py",
+    ]

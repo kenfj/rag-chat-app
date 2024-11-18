@@ -1,7 +1,7 @@
 from typing import Iterator
 
 from fastapi import Request
-from litellm.types.utils import Choices, StreamingChoices
+from litellm.types.utils import Choices, ModelResponse, StreamingChoices
 from litellm.utils import CustomStreamWrapper
 
 from config.logging_config import get_logger
@@ -21,7 +21,8 @@ async def chat_completion(req: ChatRequest):
     history.append(user_message)
 
     messages = create_keyword_messages(history)
-    keywords = await find_keywords(messages)
+    keywords_response = await complete_response(messages)
+    keywords = create_complete_response(keywords_response)
 
     docs = find_docs(keywords)
     messages = create_chat_messages(history, docs)
@@ -29,7 +30,7 @@ async def chat_completion(req: ChatRequest):
     logger.info(f"Chat completion prompt: {to_pretty_json(messages)}")
 
     response = await complete_response(messages)
-    content = create_complete_response(response)
+    content = create_complete_response(response) or "No response found"
 
     # Save LLM output to chat history
     assistant_message = Message(role="assistant", content=content)
@@ -46,7 +47,8 @@ async def chat_stream(request: Request, req: StreamChatRequest):
     history.append(user_message)
 
     messages = create_keyword_messages(history)
-    keywords = await find_keywords(messages)
+    keywords_response = await complete_response(messages)
+    keywords = create_complete_response(keywords_response)
 
     docs = find_docs(keywords)
     messages = create_chat_messages(history, docs)
@@ -54,23 +56,23 @@ async def chat_stream(request: Request, req: StreamChatRequest):
     logger.info(f"Chat stream prompt: {to_pretty_json(messages)}")
 
     response = await stream_response(messages)
-    content = generate_stream_response(request, response)
+    content_generator = create_stream_response(request, response)
 
-    return content
+    return content_generator
 
 
-def create_complete_response(response):
+def create_complete_response(response: ModelResponse):
     choice = response.choices[0]
 
     if not isinstance(choice, Choices):
         raise ValueError(f"Unexpected type: {type(choice)} for Choices")
 
-    content = choice.message.content or ""
+    content = choice.message.content
 
     return content
 
 
-async def generate_stream_response(request: Request, response: CustomStreamWrapper):
+async def create_stream_response(request: Request, response: CustomStreamWrapper):
     buffer = ""
 
     # the last element of chunk content is always None
@@ -89,18 +91,6 @@ async def generate_stream_response(request: Request, response: CustomStreamWrapp
             # Save LLM message to chat history
             assistant_message = Message(role="assistant", content=buffer)
             request.state.session["history"].append(assistant_message)
-
-
-async def find_keywords(messages):
-    keywords_response = await complete_response(messages)
-    choice = keywords_response.choices[0]
-
-    if not isinstance(choice, Choices):
-        raise ValueError(f"Unexpected type: {type(choice)} for Choices")
-
-    keywords = choice.message.content
-
-    return keywords
 
 
 def find_docs(keywords: str | None):

@@ -110,6 +110,23 @@ poetry add litellm azure-search-documents
     - `"python.analysis.typeCheckingMode": "basic"` in `.vscode/settings.json`
     - https://blog.yhiraki.com/nodes/type-checking-with-pyright/
 
+* pytest
+
+```bash
+poetry add pytest pytest-cov pytest-asyncio pytest-mock --group dev
+
+# to debug in case ModuleNotFoundError (cf. pyproject.toml ini_options)
+poetry run pytest ./tests --collect-only
+
+# run tests
+poetry run pytest -vv ./tests
+
+# coverage report
+poetry run pytest --cov=src --cov-report=html ./tests
+
+open htmlcov/index.html
+```
+
 * Ollama: https://github.com/ollama/ollama
   - used with LiteLLM-Ollama: https://docs.litellm.ai/docs/providers/ollama
 
@@ -208,10 +225,23 @@ popular Python UI libraries
 
 ### setup Chainlit
 
+* install chainlit will be error `version solving failed.`
+  - FastAPI needs `starlette >=0.37.2,<0.39.0` (`poetry show fastapi`)
+  - Chainlit needs `starlette >=0.37.2,<0.38.0`
+  - Chainlit needs `fastapi >=0.110.1,<0.113` (`poetry show chainlit`)
+
 ```bash
 # need to remove the current fastapi
 # because chainlit (1.2.0) depends on fastapi (>=0.110.1,<0.113)
 poetry remove fastapi
+
+poetry show starlette
+# Package starlette not found
+
+# this will be version solving failed.
+# poetry add "fastapi[standard]" chainlit
+
+# install with required version
 poetry add "fastapi[standard]"@^0.112.0 chainlit
 
 # this ensures all dependencies are resolved properly

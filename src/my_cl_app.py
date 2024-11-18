@@ -16,6 +16,8 @@ async def main():
 @cl.on_message
 async def chainlit_chat(message: cl.Message):
     session_id = cl.user_session.get("session_id", "")
+    # get result is Unknown | None
+    session_id = str(session_id or "")
     logger.info(f"session_id: {session_id}")
 
     stream_url = "http://127.0.0.1:8000/chat-stream"
